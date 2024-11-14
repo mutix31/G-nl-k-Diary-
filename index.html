@@ -29,6 +29,12 @@
             margin-top: 10px;
             padding: 10px 20px;
         }
+        .bbcode-bar {
+            margin-top: 10px;
+        }
+        .bbcode-bar button {
+            margin-right: 5px;
+        }
         .entries {
             width: 90%;
             margin-top: 20px;
@@ -49,6 +55,12 @@
 </head>
 <body>
     <h1>Günlük</h1>
+    <div class="bbcode-bar">
+        <button onclick="wrapText('[b]', '[/b]')">B</button>
+        <button onclick="wrapText('[i]', '[/i]')">I</button>
+        <button onclick="wrapText('[u]', '[/u]')">U</button>
+        <button onclick="wrapText('[color=#FF0000]', '[/color]')" style="color: #FF0000;">Renk</button>
+    </div>
     <textarea id="entry" placeholder="Günlük yazınızı buraya yazın..."></textarea>
     <input type="file" id="image" accept="image/*">
     <button onclick="saveEntry()">Kaydet</button>
@@ -65,6 +77,15 @@
                 .replace(/\[i\](.*?)\[\/i\]/g, '<em>$1</em>')
                 .replace(/\[u\](.*?)\[\/u\]/g, '<u>$1</u>')
                 .replace(/\[color=(.*?)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
+        }
+
+        function wrapText(before, after) {
+            const entryTextarea = document.getElementById('entry');
+            const start = entryTextarea.selectionStart;
+            const end = entryTextarea.selectionEnd;
+            const selectedText = entryTextarea.value.substring(start, end);
+            const newText = before + selectedText + after;
+            entryTextarea.setRangeText(newText, start, end, 'end');
         }
 
         function saveEntry() {
