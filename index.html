@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Günlük Tutma Uygulaması</title>
     <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,23 +18,14 @@
         h1 {
             margin-top: 20px;
         }
-        textarea {
+        .editor {
             width: 90%;
-            height: 100px;
+            height: 200px;
             margin-top: 20px;
-        }
-        input[type="file"] {
-            margin-top: 10px;
         }
         button {
             margin-top: 10px;
             padding: 10px 20px;
-        }
-        .bbcode-bar {
-            margin-top: 10px;
-        }
-        .bbcode-bar button {
-            margin-right: 5px;
         }
         .entries {
             width: 90%;
@@ -55,64 +47,32 @@
 </head>
 <body>
     <h1>Günlük</h1>
-    <div class="bbcode-bar">
-        <button onclick="wrapText('[b]', '[/b]')">B</button>
-        <button onclick="wrapText('[i]', '[/i]')">I</button>
-        <button onclick="wrapText('[u]', '[/u]')">U</button>
-        <button onclick="wrapText('[color=#FF0000]', '[/color]')" style="color: #FF0000;">Renk</button>
-    </div>
-    <textarea id="entry" placeholder="Günlük yazınızı buraya yazın..."></textarea>
-    <input type="file" id="image" accept="image/*">
+    <textarea id="entry" class="editor"></textarea>
     <button onclick="saveEntry()">Kaydet</button>
     <div class="entries" id="entries"></div>
 
     <script>
+        tinymce.init({
+            selector: '.editor',
+            plugins: 'advlist autolink lists link image charmap print preview hr anchor pagebreak',
+            toolbar_mode: 'floating',
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             loadEntries();
         });
 
-        function bbcodeToHtml(text) {
-            return text
-                .replace(/\[b\](.*?)\[\/b\]/g, '<strong>$1</strong>')
-                .replace(/\[i\](.*?)\[\/i\]/g, '<em>$1</em>')
-                .replace(/\[u\](.*?)\[\/u\]/g, '<u>$1</u>')
-                .replace(/\[color=(.*?)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
-        }
-
-        function wrapText(before, after) {
-            const entryTextarea = document.getElementById('entry');
-            const start = entryTextarea.selectionStart;
-            const end = entryTextarea.selectionEnd;
-            const selectedText = entryTextarea.value.substring(start, end);
-            const newText = before + selectedText + after;
-            entryTextarea.setRangeText(newText, start, end, 'end');
-        }
-
         function saveEntry() {
+            tinymce.triggerSave();
             const entry = document.getElementById('entry').value;
-            const imageFile = document.getElementById('image').files[0];
-            if (entry.trim() === '' && !imageFile) return;
+            if (entry.trim() === '') return;
 
             const entries = JSON.parse(localStorage.getItem('entries')) || [];
-            const reader = new FileReader();
+            entries.push({ date: new Date().toLocaleString(), content: entry });
+            localStorage.setItem('entries', JSON.stringify(entries));
 
-            reader.onload = function (e) {
-                const imageSrc = e.target.result;
-                entries.push({ date: new Date().toLocaleString(), content: entry, imageSrc });
-                localStorage.setItem('entries', JSON.stringify(entries));
-
-                document.getElementById('entry').value = '';
-                document.getElementById('image').value = '';
-                loadEntries();
-            };
-
-            if (imageFile) {
-                reader.readAsDataURL(imageFile);
-            } else {
-                entries.push({ date: new Date().toLocaleString(), content: entry });
-                localStorage.setItem('entries', JSON.stringify(entries));
-                loadEntries();
-            }
+            tinymce.get('entry').setContent('');
+            loadEntries();
         }
 
         function loadEntries() {
@@ -124,10 +84,7 @@
                 const entryDiv = document.createElement('div');
                 entryDiv.className = 'entry';
                 entryDiv.innerHTML = `<strong>${entry.date}</strong>
-                                      <div class="hidden-content" id="content-${index}">
-                                        <p>${bbcodeToHtml(entry.content)}</p>
-                                        ${entry.imageSrc ? `<img src="${entry.imageSrc}" style="max-width: 100%;">` : ''}
-                                      </div>
+                                      <div class="hidden-content" id="content-${index}"><p>${entry.content}</p></div>
                                       <div class="controls">
                                         <button onclick="toggleContent(${index})">Gör</button>
                                         <button onclick="editEntry(${index})">Düzenle</button>
@@ -152,7 +109,7 @@
         function editEntry(index) {
             const entries = JSON.parse(localStorage.getItem('entries'));
             const entry = entries[index];
-            document.getElementById('entry').value = entry.content;
+            tinymce.get('entry').setContent(entry.content);
             entries.splice(index, 1);
             localStorage.setItem('entries', JSON.stringify(entries));
             loadEntries();
