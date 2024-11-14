@@ -68,14 +68,15 @@
         }
 
         function saveEntry() {
-            const entry = sceditor.instance(document.getElementById('entry')).val();
+            const editorInstance = sceditor.instance(document.getElementById('entry'));
+            const entry = editorInstance.val();
             if (entry.trim() === '') return;
 
             const entries = JSON.parse(localStorage.getItem('entries')) || [];
             entries.push({ date: new Date().toLocaleString(), content: entry });
             localStorage.setItem('entries', JSON.stringify(entries));
 
-            sceditor.instance(document.getElementById('entry')).val('');
+            editorInstance.val('');
             loadEntries();
         }
 
