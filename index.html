@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Günlük Tutma Uygulaması</title>
     <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,10 +21,18 @@
             width: 90%;
             height: 200px;
             margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
         }
-        button {
+        .bbcode-bar {
+            width: 90%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
             margin-top: 10px;
-            padding: 10px 20px;
+        }
+        .bbcode-bar button {
+            padding: 5px 10px;
         }
         .entries {
             width: 90%;
@@ -47,32 +54,74 @@
 </head>
 <body>
     <h1>Günlük</h1>
-    <textarea id="entry" class="editor"></textarea>
+    <div class="bbcode-bar">
+        <button onclick="wrapText('[b]', '[/b]')"><strong>B</strong></button>
+        <button onclick="wrapText('[i]', '[/i]')"><em>I</em></button>
+        <button onclick="wrapText('[u]', '[/u]')"><u>U</u></button>
+        <button onclick="wrapText('[s]', '[/s]')"><s>S</s></button>
+        <button onclick="wrapText('[ul]', '[/ul]')">UL</button>
+        <button onclick="wrapText('[ol]', '[/ol]')">OL</button>
+        <button onclick="wrapText('[li]', '[/li]')">LI</button>
+        <button onclick="wrapText('[quote]', '[/quote]')">Quote</button>
+        <button onclick="wrapText('[color=#FF0000]', '[/color]')" style="color: #FF0000;">Renk</button>
+    </div>
+    <textarea id="entry" class="editor" placeholder="Günlük yazınızı buraya yazın..."></textarea>
+    <input type="file" id="image" accept="image/*">
     <button onclick="saveEntry()">Kaydet</button>
     <div class="entries" id="entries"></div>
 
     <script>
-        tinymce.init({
-            selector: '.editor',
-            plugins: 'advlist autolink lists link image charmap print preview hr anchor pagebreak',
-            toolbar_mode: 'floating',
-        });
-
         document.addEventListener('DOMContentLoaded', () => {
             loadEntries();
         });
 
+        function bbcodeToHtml(text) {
+            return text
+                .replace(/\[b\](.*?)\[\/b\]/g, '<strong>$1</strong>')
+                .replace(/\[i\](.*?)\[\/i\]/g, '<em>$1</em>')
+                .replace(/\[u\](.*?)\[\/u\]/g, '<u>$1</u>')
+                .replace(/\[s\](.*?)\[\/s\]/g, '<s>$1</s>')
+                .replace(/\[ul\](.*?)\[\/ul\]/g, '<ul>$1</ul>')
+                .replace(/\[ol\](.*?)\[\/ol\]/g, '<ol>$1</ol>')
+                .replace(/\[li\](.*?)\[\/li\]/g, '<li>$1</li>')
+                .replace(/\[quote\](.*?)\[\/quote\]/g, '<blockquote>$1</blockquote>')
+                .replace(/\[color=(.*?)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
+        }
+
+        function wrapText(before, after) {
+            const entryTextarea = document.getElementById('entry');
+            const start = entryTextarea.selectionStart;
+            const end = entryTextarea.selectionEnd;
+            const selectedText = entryTextarea.value.substring(start, end);
+            const newText = before + selectedText + after;
+            entryTextarea.setRangeText(newText, start, end, 'end');
+        }
+
         function saveEntry() {
-            tinymce.triggerSave();
             const entry = document.getElementById('entry').value;
-            if (entry.trim() === '') return;
+            const imageFile = document.getElementById('image').files[0];
+            if (entry.trim() === '' && !imageFile) return;
 
             const entries = JSON.parse(localStorage.getItem('entries')) || [];
-            entries.push({ date: new Date().toLocaleString(), content: entry });
-            localStorage.setItem('entries', JSON.stringify(entries));
+            const reader = new FileReader();
 
-            tinymce.get('entry').setContent('');
-            loadEntries();
+            reader.onload = function (e) {
+                const imageSrc = e.target.result;
+                entries.push({ date: new Date().toLocaleString(), content: entry, imageSrc });
+                localStorage.setItem('entries', JSON.stringify(entries));
+
+                document.getElementById('entry').value = '';
+                document.getElementById('image').value = '';
+                loadEntries();
+            };
+
+            if (imageFile) {
+                reader.readAsDataURL(imageFile);
+            } else {
+                entries.push({ date: new Date().toLocaleString(), content: entry });
+                localStorage.setItem('entries', JSON.stringify(entries));
+                loadEntries();
+            }
         }
 
         function loadEntries() {
@@ -84,7 +133,10 @@
                 const entryDiv = document.createElement('div');
                 entryDiv.className = 'entry';
                 entryDiv.innerHTML = `<strong>${entry.date}</strong>
-                                      <div class="hidden-content" id="content-${index}"><p>${entry.content}</p></div>
+                                      <div class="hidden-content" id="content-${index}">
+                                        <p>${bbcodeToHtml(entry.content)}</p>
+                                        ${entry.imageSrc ? `<img src="${entry.imageSrc}" style="max-width: 100%;">` : ''}
+                                      </div>
                                       <div class="controls">
                                         <button onclick="toggleContent(${index})">Gör</button>
                                         <button onclick="editEntry(${index})">Düzenle</button>
@@ -109,7 +161,7 @@
         function editEntry(index) {
             const entries = JSON.parse(localStorage.getItem('entries'));
             const entry = entries[index];
-            tinymce.get('entry').setContent(entry.content);
+            document.getElementById('entry').value = entry.content;
             entries.splice(index, 1);
             localStorage.setItem('entries', JSON.stringify(entries));
             loadEntries();
