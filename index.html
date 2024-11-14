@@ -25,9 +25,6 @@
         input[type="file"] {
             margin-top: 10px;
         }
-        input[type="color"] {
-            margin-top: 10px;
-        }
         button {
             margin-top: 10px;
             padding: 10px 20px;
@@ -54,8 +51,6 @@
     <h1>Günlük</h1>
     <textarea id="entry" placeholder="Günlük yazınızı buraya yazın..."></textarea>
     <input type="file" id="image" accept="image/*">
-    <input type="color" id="textColor" value="#000000" title="Seçilen Metin Rengi">
-    <button onclick="applyTextColor()">Renk Uygula</button>
     <button onclick="saveEntry()">Kaydet</button>
     <div class="entries" id="entries"></div>
 
@@ -64,22 +59,12 @@
             loadEntries();
         });
 
-        function applyTextColor() {
-            const entryTextarea = document.getElementById('entry');
-            const textColor = document.getElementById('textColor').value;
-            const selectedText = window.getSelection().toString();
-
-            if (selectedText) {
-                const startIndex = entryTextarea.selectionStart;
-                const endIndex = entryTextarea.selectionEnd;
-                const originalText = entryTextarea.value;
-
-                entryTextarea.value = originalText.slice(0, startIndex) +
-                                      `<span style="color:${textColor}">` +
-                                      originalText.slice(startIndex, endIndex) +
-                                      '</span>' +
-                                      originalText.slice(endIndex);
-            }
+        function bbcodeToHtml(text) {
+            return text
+                .replace(/\[b\](.*?)\[\/b\]/g, '<strong>$1</strong>')
+                .replace(/\[i\](.*?)\[\/i\]/g, '<em>$1</em>')
+                .replace(/\[u\](.*?)\[\/u\]/g, '<u>$1</u>')
+                .replace(/\[color=(.*?)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
         }
 
         function saveEntry() {
@@ -119,7 +104,7 @@
                 entryDiv.className = 'entry';
                 entryDiv.innerHTML = `<strong>${entry.date}</strong>
                                       <div class="hidden-content" id="content-${index}">
-                                        <p>${entry.content}</p>
+                                        <p>${bbcodeToHtml(entry.content)}</p>
                                         ${entry.imageSrc ? `<img src="${entry.imageSrc}" style="max-width: 100%;">` : ''}
                                       </div>
                                       <div class="controls">
