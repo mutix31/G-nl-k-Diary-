@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Günlük Tutma Uygulaması</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin-top: 20px;
+        }
+        textarea {
+            width: 90%;
+            height: 100px;
+            margin-top: 20px;
+        }
+        input[type="file"] {
+            margin-top: 10px;
+        }
+        input[type="color"] {
+            margin-top: 10px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+        }
+        .entries {
+            width: 90%;
+            margin-top: 20px;
+        }
+        .entry {
+            background-color: #f4f4f4;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+        }
+        .hidden-content {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Günlük</h1>
+    <textarea id="entry" placeholder="Günlük yazınızı buraya yazın..."></textarea>
+    <input type="file" id="image" accept="image/*">
+    <input type="color" id="textColor" value="#000000" title="Seçilen Metin Rengi">
+    <button onclick="applyTextColor()">Renk Uygula</button>
+    <button onclick="saveEntry()">Kaydet</button>
+    <div class="entries" id="entries"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEntries();
+        });
+
+        function applyTextColor() {
+            const entryTextarea = document.getElementById('entry');
+            const textColor = document.getElementById('textColor').value;
+            const selectedText = window.getSelection().toString();
+
+            if (selectedText) {
+                const startIndex = entryTextarea.selectionStart;
+                const endIndex = entryTextarea.selectionEnd;
+                const originalText = entryTextarea.value;
+
+                entryTextarea.value = originalText.slice(0, startIndex) +
+                                      `<span style="color:${textColor}">` +
+                                      originalText.slice(startIndex, endIndex) +
+                                      '</span>' +
+                                      originalText.slice(endIndex);
+            }
+        }
+
+        function saveEntry() {
+            const entry = document.getElementById('entry').value;
+            const imageFile = document.getElementById('image').files[0];
+            if (entry.trim() === '' && !imageFile) return;
+
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const imageSrc = e.target.result;
+                entries.push({ date: new Date().toLocaleString(), content: entry, imageSrc });
+                localStorage.setItem('entries', JSON.stringify(entries));
+
+                document.getElementById('entry').value = '';
+                document.getElementById('image').value = '';
+                loadEntries();
+            };
+
+            if (imageFile) {
+                reader.readAsDataURL(imageFile);
+            } else {
+                entries.push({ date: new Date().toLocaleString(), content: entry });
+                localStorage.setItem('entries', JSON.stringify(entries));
+                loadEntries();
+            }
+        }
+
+        function loadEntries() {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            const entriesDiv = document.getElementById('entries');
+            entriesDiv.innerHTML = '';
+
+            entries.forEach((entry, index) => {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'entry';
+                entryDiv.innerHTML = `<strong>${entry.date}</strong>
+                                      <div class="hidden-content" id="content-${index}">
+                                        <p>${entry.content}</p>
+                                        ${entry.imageSrc ? `<img src="${entry.imageSrc}" style="max-width: 100%;">` : ''}
+                                      </div>
+                                      <div class="controls">
+                                        <button onclick="toggleContent(${index})">Gör</button>
+                                        <button onclick="editEntry(${index})">Düzenle</button>
+                                        <button onclick="deleteEntry(${index})">Sil</button>
+                                      </div>`;
+                entriesDiv.appendChild(entryDiv);
+            });
+        }
+
+        function toggleContent(index) {
+            const contentDiv = document.getElementById(`content-${index}`);
+            contentDiv.classList.toggle('hidden-content');
+        }
+
+        function deleteEntry(index) {
+            const entries = JSON.parse(localStorage.getItem('entries'));
+            entries.splice(index, 1);
+            localStorage.setItem('entries', JSON.stringify(entries));
+            loadEntries();
+        }
+
+        function editEntry(index) {
+            const entries = JSON.parse(localStorage.getItem('entries'));
+            const entry = entries[index];
+            document.getElementById('entry').value = entry.content;
+            entries.splice(index, 1);
+            localStorage.setItem('entries', JSON.stringify(entries));
+            loadEntries();
+        }
+    </script>
+</body>
+</html>
